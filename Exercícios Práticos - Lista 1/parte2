@@ -1,0 +1,141 @@
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+class PlacaInvalidaException extends RuntimeException {
+    public PlacaInvalidaException(String mensagem) {
+        super(mensagem);
+    }
+}
+
+interface Tributavel {
+    double calcularIPVA();
+}
+
+abstract class Veiculo {
+    private String placa;
+    protected double custoFixo; // Protected para facilitar nas filhas, ou pode usar gets
+
+    public Veiculo(String placa, double custoFixo) {
+        if (placa == null || placa.length() != 7) {
+            throw new PlacaInvalidaException("A placa informada ('" + placa + "') é inválida. Deve conter exatamente 7 caracteres.");
+        }
+        this.placa = placa;
+        this.custoFixo = custoFixo;
+    }
+
+    public String getPlaca() { return placa; }
+    public double getCustoFixo() { return custoFixo; }
+
+    public abstract double calcularCustoTotal();
+}
+
+class Carro extends Veiculo implements Tributavel {
+    private int quilometragem;
+
+    public Carro(String placa, double custoFixo, int quilometragem) {
+        super(placa, custoFixo);
+        this.quilometragem = quilometragem;
+    }
+
+    @Override
+    public double calcularCustoTotal() {
+        return custoFixo + (quilometragem * 0.15);
+    }
+
+    @Override
+    public double calcularIPVA() {
+        return custoFixo * 0.04; // 4%
+    }
+}
+
+class Caminhao extends Veiculo implements Tributavel {
+    private double toneladasCarga;
+
+    public Caminhao(String placa, double custoFixo, double toneladasCarga) {
+        super(placa, custoFixo);
+        this.toneladasCarga = toneladasCarga;
+    }
+
+    @Override
+    public double calcularCustoTotal() {
+        return custoFixo + (toneladasCarga * 50.0);
+    }
+
+    @Override
+    public double calcularIPVA() {
+        return custoFixo * 0.015; // 1.5%
+    }
+}
+
+class GerenciadorFrota {
+    private List<Veiculo> frota = new ArrayList<>();
+
+    public void adicionarVeiculo(Veiculo v) {
+        frota.add(v);
+        System.out.println("Veículo placa " + v.getPlaca() + " adicionado à frota.");
+    }
+
+    public void salvarDadosEmArquivo(String nomeArquivo) {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(nomeArquivo))) {
+            for (Veiculo v : frota) {
+              
+                String tipo = v.getClass().getSimpleName();
+                double ipva = (v instanceof Tributavel) ? ((Tributavel) v).calcularIPVA() : 0.0;
+                
+                String linha = String.format("Tipo: %s | Placa: %s | Custo Fixo: %.2f | Custo Total: %.2f | IPVA: %.2f",
+                        tipo, v.getPlaca(), v.getCustoFixo(), v.calcularCustoTotal(), ipva);
+                
+                bw.write(linha);
+                bw.newLine();
+            }
+            System.out.println("\n[I/O] Dados gravados com sucesso no arquivo: " + nomeArquivo);
+        } catch (IOException e) {
+            System.err.println("Erro ao gravar arquivo: " + e.getMessage());
+        }
+    }
+
+    public void lerDadosDoArquivo(String nomeArquivo) {
+        System.out.println("\n[I/O] Lendo dados do arquivo: " + nomeArquivo);
+        try (BufferedReader br = new BufferedReader(new FileReader(nomeArquivo))) {
+            String linha;
+            while ((linha = br.readLine()) != null) {
+                System.out.println(linha);
+            }
+        } catch (IOException e) {
+            System.err.println("Erro ao ler arquivo: " + e.getMessage());
+        }
+    }
+}
+
+public class SistemaFrota {
+    public static void main(String[] args) {
+        System.out.println("=== SISTEMA DE GESTÃO DE FROTA ===");
+        GerenciadorFrota gerenciador = new GerenciadorFrota();
+        
+        System.out.println("\n--- Ação 1: Testando placa inválida ---");
+        try {
+            Veiculo vInvalido = new Carro("ABC12", 2000.0, 15000);
+        } catch (PlacaInvalidaException e) {
+            System.out.println("Exceção capturada com sucesso: " + e.getMessage());
+        }
+        
+        System.out.println("\n--- Ação 2: Populando a Frota ---");
+        Veiculo carro1 = new Carro("XYZ1234", 1500.00, 20000);
+        Veiculo caminhao1 = new Caminhao("TRK9876", 5000.00, 15.5);
+        
+        gerenciador.adicionarVeiculo(carro1);
+        gerenciador.adicionarVeiculo(caminhao1);
+
+        System.out.println("\n--- Ação 3: Gravação de Arquivo ---");
+        String nomeArquivo = "frota.txt";
+        gerenciador.salvarDadosEmArquivo(nomeArquivo);
+
+        System.out.println("\n--- Ação 4: Leitura de Arquivo ---");
+        gerenciador.lerDadosDoArquivo(nomeArquivo);
+    }
+}
