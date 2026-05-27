@@ -1,0 +1,38 @@
+
+class SaldoInsuficienteException extends Exception {
+    public SaldoInsuficienteException(double saldoDisponivel, double valorSolicitado) {
+        super(String.format("Operação negada! Saldo disponível: R$ %.2f | Valor solicitado: R$ %.2f", 
+                            saldoDisponivel, valorSolicitado));
+    }
+}
+
+class ContaBancaria {
+    private String titular;
+    private double saldo;
+
+    public ContaBancaria(String titular, double saldoInicial) {
+        this.titular = titular;
+        this.saldo = saldoInicial;
+    }
+
+    public void sacar(double valor) throws SaldoInsuficienteException {
+        if (valor > saldo) {
+            throw new SaldoInsuficienteException(saldo, valor);
+        }
+        saldo -= valor;
+        System.out.printf("Saque de R$ %.2f realizado com sucesso. Novo saldo: R$ %.2f\n", valor, saldo);
+    }
+}
+
+public class MainBanco {
+    public static void main(String[] args) {
+        ContaBancaria conta = new ContaBancaria("Carlos", 500.00);
+
+        try {
+            System.out.println("Tentando realizar o saque...");
+            conta.sacar(600.00);
+        } catch (SaldoInsuficienteException e) {
+            System.out.println("Erro Capturado: " + e.getMessage());
+        }
+    }
+}
